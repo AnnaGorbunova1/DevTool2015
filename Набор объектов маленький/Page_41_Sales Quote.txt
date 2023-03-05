@@ -1,0 +1,747 @@
+OBJECT Page 41 Sales Quote
+{
+  OBJECT-PROPERTIES
+  {
+    Date=18.12.13;
+    Time=12:00:00;
+    Version List=NAVW17.10,NAVRU7.10;
+  }
+  PROPERTIES
+  {
+    CaptionML=[ENU=Sales Quote;
+               RUS=????????? ?? ?????];
+    SourceTable=Table36;
+    SourceTableView=WHERE(Document Type=FILTER(Quote));
+    PageType=Document;
+    RefreshOnActivate=Yes;
+    OnInit=BEGIN
+             "Bill-to Customer No.Enable" := TRUE;
+             "Sell-to Customer No.Enable" := TRUE;
+             SelltoCustomerTemplateCodeEnab := TRUE;
+             BilltoCustomerTemplateCodeEnab := TRUE;
+           END;
+
+    OnOpenPage=BEGIN
+                 IF UserMgt.GetSalesFilter <> '' THEN BEGIN
+                   FILTERGROUP(2);
+                   SETRANGE("Responsibility Center",UserMgt.GetSalesFilter);
+                   FILTERGROUP(0);
+                 END;
+
+                 ActivateFields;
+               END;
+
+    OnAfterGetRecord=BEGIN
+                       ActivateFields;
+                     END;
+
+    OnNewRecord=BEGIN
+                  "Responsibility Center" := UserMgt.GetSalesFilter;
+                END;
+
+    OnInsertRecord=BEGIN
+                     CheckCreditMaxBeforeInsert;
+                   END;
+
+    OnDeleteRecord=BEGIN
+                     CurrPage.SAVERECORD;
+                     EXIT(ConfirmDeletion);
+                   END;
+
+    OnAfterGetCurrRecord=BEGIN
+                           ActivateFields;
+                         END;
+
+    ActionList=ACTIONS
+    {
+      { 1900000003;0 ;ActionContainer;
+                      ActionContainerType=RelatedInformation }
+      { 59      ;1   ;ActionGroup;
+                      CaptionML=[ENU=&Quote;
+                                 RUS=&?????????];
+                      Image=Quote }
+      { 61      ;2   ;Action    ;
+                      Name=Statistics;
+                      ShortCutKey=F7;
+                      CaptionML=[ENU=Statistics;
+                                 RUS=??????];
+                      Promoted=Yes;
+                      Image=Statistics;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 CalcInvDiscForHeader;
+                                 COMMIT;
+                                 PAGE.RUNMODAL(PAGE::"Sales Statistics",Rec);
+                               END;
+                                }
+      { 62      ;2   ;Action    ;
+                      ShortCutKey=Shift+F7;
+                      CaptionML=[ENU=Customer Card;
+                                 RUS=????? ??????];
+                      RunObject=Page 21;
+                      RunPageLink=No.=FIELD(Sell-to Customer No.);
+                      Image=Customer }
+      { 146     ;2   ;Action    ;
+                      CaptionML=[ENU=C&ontact Card;
+                                 RUS=????&?? ?????];
+                      RunObject=Page 5050;
+                      RunPageLink=No.=FIELD(Sell-to Contact No.);
+                      Image=Card }
+      { 63      ;2   ;Action    ;
+                      CaptionML=[ENU=Co&mments;
+                                 RUS=??&??????];
+                      RunObject=Page 67;
+                      RunPageLink=Document Type=FIELD(Document Type),
+                                  No.=FIELD(No.),
+                                  Document Line No.=CONST(0);
+                      Image=ViewComments }
+      { 104     ;2   ;Action    ;
+                      ShortCutKey=Shift+Ctrl+D;
+                      CaptionML=[ENU=Dimensions;
+                                 RUS=???????];
+                      Image=Dimensions;
+                      OnAction=BEGIN
+                                 ShowDocDim;
+                                 CurrPage.SAVERECORD;
+                               END;
+                                }
+      { 189     ;2   ;Action    ;
+                      CaptionML=[ENU=Approvals;
+                                 RUS=???????];
+                      Image=Approvals;
+                      OnAction=VAR
+                                 ApprovalEntries@1001 : Page 658;
+                               BEGIN
+                                 ApprovalEntries.Setfilters(DATABASE::"Sales Header","Document Type","No.");
+                                 ApprovalEntries.RUN;
+                               END;
+                                }
+      { 1900000004;0 ;ActionContainer;
+                      ActionContainerType=ActionItems }
+      { 69      ;1   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=&Print;
+                                 RUS=&?????];
+                      Promoted=Yes;
+                      Image=Print;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 DocPrint.PrintSalesHeader(Rec);
+                               END;
+                                }
+      { 3       ;1   ;ActionGroup;
+                      CaptionML=[ENU=Release;
+                                 RUS=???????];
+                      Image=ReleaseDoc }
+      { 115     ;2   ;Action    ;
+                      Name=Release;
+                      ShortCutKey=Ctrl+F9;
+                      CaptionML=[ENU=Re&lease;
+                                 RUS=??&??????];
+                      Image=ReleaseDoc;
+                      OnAction=VAR
+                                 ReleaseSalesDoc@1000 : Codeunit 414;
+                               BEGIN
+                                 ReleaseSalesDoc.PerformManualRelease(Rec);
+                               END;
+                                }
+      { 116     ;2   ;Action    ;
+                      CaptionML=[ENU=Re&open;
+                                 RUS=&??????];
+                      Image=ReOpen;
+                      OnAction=VAR
+                                 ReleaseSalesDoc@1001 : Codeunit 414;
+                               BEGIN
+                                 ReleaseSalesDoc.PerformManualReopen(Rec);
+                               END;
+                                }
+      { 137     ;2   ;Separator  }
+      { 64      ;1   ;ActionGroup;
+                      CaptionML=[ENU=F&unctions;
+                                 RUS=?&??];
+                      Image=Action }
+      { 65      ;2   ;Action    ;
+                      CaptionML=[ENU=Calculate &Invoice Discount;
+                                 RUS=???&??? ???? ?? ????];
+                      Image=CalculateInvoiceDiscount;
+                      OnAction=BEGIN
+                                 ApproveCalcInvDisc;
+                               END;
+                                }
+      { 168     ;2   ;Separator  }
+      { 124     ;2   ;Action    ;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=Get St&d. Cust. Sales Codes;
+                                 RUS=??????? ??&??????. ???? ????? ??????];
+                      Image=CustomerCode;
+                      OnAction=VAR
+                                 StdCustSalesCode@1000 : Record 172;
+                               BEGIN
+                                 StdCustSalesCode.InsertSalesLines(Rec);
+                               END;
+                                }
+      { 139     ;2   ;Separator  }
+      { 66      ;2   ;Action    ;
+                      Name=CopyDocument;
+                      Ellipsis=Yes;
+                      CaptionML=[ENU=Copy Document;
+                                 RUS=???????? ??????];
+                      Promoted=Yes;
+                      Image=CopyDocument;
+                      PromotedCategory=Process;
+                      OnAction=BEGIN
+                                 CopySalesDoc.SetSalesHeader(Rec);
+                                 CopySalesDoc.RUNMODAL;
+                                 CLEAR(CopySalesDoc);
+                               END;
+                                }
+      { 165     ;2   ;Action    ;
+                      Name=Archive Document;
+                      CaptionML=[ENU=Archi&ve Document;
+                                 RUS=???&?????? ??????];
+                      Image=Archive;
+                      OnAction=BEGIN
+                                 ArchiveManagement.ArchiveSalesDocument(Rec);
+                                 CurrPage.UPDATE(FALSE);
+                               END;
+                                }
+      { 141     ;2   ;Separator  }
+      { 5       ;1   ;ActionGroup;
+                      CaptionML=[ENU=Create;
+                                 RUS=???????];
+                      Image=NewCustomer }
+      { 68      ;2   ;Action    ;
+                      Name=Make Order;
+                      CaptionML=[ENU=Make &Order;
+                                 RUS=??????? &?????];
+                      Promoted=Yes;
+                      Image=MakeOrder;
+                      PromotedCategory=Process;
+                      OnAction=VAR
+                                 PurchaseHeader@1001 : Record 38;
+                                 ApprovalMgt@1000 : Codeunit 439;
+                               BEGIN
+                                 IF ApprovalMgt.PrePostApprovalCheck(Rec,PurchaseHeader) THEN
+                                   CODEUNIT.RUN(CODEUNIT::"Sales-Quote to Order (Yes/No)",Rec);
+                               END;
+                                }
+      { 126     ;2   ;Action    ;
+                      CaptionML=[ENU=C&reate Customer;
+                                 RUS=?&?????? ??????];
+                      Image=NewCustomer;
+                      OnAction=BEGIN
+                                 IF CheckCustomerCreated(FALSE) THEN
+                                   CurrPage.UPDATE(TRUE);
+                               END;
+                                }
+      { 169     ;2   ;Action    ;
+                      CaptionML=[ENU=Create &To-do;
+                                 RUS=??????? &??????];
+                      Image=NewToDo;
+                      OnAction=BEGIN
+                                 CreateTodo;
+                               END;
+                                }
+      { 143     ;2   ;Separator  }
+      { 7       ;1   ;ActionGroup;
+                      CaptionML=[ENU=Approval;
+                                 RUS=???????];
+                      Image=Approval }
+      { 190     ;2   ;Action    ;
+                      CaptionML=[ENU=Send A&pproval Request;
+                                 RUS=?????? &????? ?? ???????];
+                      Image=SendApprovalRequest;
+                      OnAction=VAR
+                                 ApprovalMgt@1001 : Codeunit 439;
+                               BEGIN
+                                 IF ApprovalMgt.SendSalesApprovalRequest(Rec) THEN;
+                               END;
+                                }
+      { 191     ;2   ;Action    ;
+                      CaptionML=[ENU=Cancel Approval Re&quest;
+                                 RUS=?????? ????? ?? &???????];
+                      Image=Cancel;
+                      OnAction=VAR
+                                 ApprovalMgt@1001 : Codeunit 439;
+                               BEGIN
+                                 IF ApprovalMgt.CancelSalesApprovalRequest(Rec,TRUE,TRUE) THEN;
+                               END;
+                                }
+      { 142     ;2   ;Separator  }
+    }
+  }
+  CONTROLS
+  {
+    { 1900000001;0;Container;
+                ContainerType=ContentArea }
+
+    { 1   ;1   ;Group     ;
+                CaptionML=[ENU=General;
+                           RUS=???] }
+
+    { 2   ;2   ;Field     ;
+                SourceExpr="No.";
+                Importance=Promoted;
+                OnAssistEdit=BEGIN
+                               IF AssistEdit(xRec) THEN
+                                 CurrPage.UPDATE;
+                             END;
+                              }
+
+    { 4   ;2   ;Field     ;
+                SourceExpr="Sell-to Customer No.";
+                Importance=Promoted;
+                Enabled="Sell-to Customer No.Enable";
+                OnValidate=BEGIN
+                             SelltoCustomerNoOnAfterValidat;
+                           END;
+                            }
+
+    { 120 ;2   ;Field     ;
+                SourceExpr="Sell-to Contact No.";
+                OnValidate=BEGIN
+                             SelltoContactNoOnAfterValidate;
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 127 ;2   ;Field     ;
+                SourceExpr="Sell-to Customer Template Code";
+                Importance=Additional;
+                Enabled=SelltoCustomerTemplateCodeEnab;
+                OnValidate=BEGIN
+                             SelltoCustomerTemplateCodeOnAf;
+                           END;
+                            }
+
+    { 6   ;2   ;Field     ;
+                SourceExpr="Sell-to Customer Name";
+                QuickEntry=FALSE }
+
+    { 71  ;2   ;Field     ;
+                SourceExpr="Sell-to Address";
+                Importance=Additional }
+
+    { 73  ;2   ;Field     ;
+                SourceExpr="Sell-to Address 2";
+                Importance=Additional }
+
+    { 77  ;2   ;Field     ;
+                SourceExpr="Sell-to Post Code";
+                Importance=Additional }
+
+    { 74  ;2   ;Field     ;
+                SourceExpr="Sell-to City";
+                QuickEntry=FALSE }
+
+    { 8   ;2   ;Field     ;
+                SourceExpr="Sell-to Contact";
+                Importance=Additional }
+
+    { 163 ;2   ;Field     ;
+                SourceExpr="No. of Archived Versions";
+                Importance=Additional;
+                OnDrillDown=BEGIN
+                              CurrPage.SAVERECORD;
+                              COMMIT;
+                              SalesHeaderArchive.SETRANGE("Document Type","Document Type"::Quote);
+                              SalesHeaderArchive.SETRANGE("No.","No.");
+                              SalesHeaderArchive.SETRANGE("Doc. No. Occurrence","Doc. No. Occurrence");
+                              IF SalesHeaderArchive.GET("Document Type"::Quote,"No.","Doc. No. Occurrence","No. of Archived Versions") THEN ;
+                              PAGE.RUNMODAL(PAGE::"Sales List Archive",SalesHeaderArchive);
+                              CurrPage.UPDATE(FALSE);
+                            END;
+                             }
+
+    { 12  ;2   ;Field     ;
+                SourceExpr="Order Date";
+                Importance=Promoted;
+                QuickEntry=FALSE }
+
+    { 15  ;2   ;Field     ;
+                SourceExpr="Document Date";
+                QuickEntry=FALSE }
+
+    { 118 ;2   ;Field     ;
+                SourceExpr="Requested Delivery Date" }
+
+    { 10  ;2   ;Field     ;
+                SourceExpr="Salesperson Code";
+                OnValidate=BEGIN
+                             SalespersonCodeOnAfterValidate;
+                           END;
+
+                QuickEntry=FALSE }
+
+    { 103 ;2   ;Field     ;
+                SourceExpr="Campaign No.";
+                QuickEntry=FALSE }
+
+    { 170 ;2   ;Field     ;
+                SourceExpr="Opportunity No.";
+                QuickEntry=FALSE }
+
+    { 108 ;2   ;Field     ;
+                SourceExpr="Responsibility Center";
+                Importance=Additional }
+
+    { 192 ;2   ;Field     ;
+                SourceExpr="Assigned User ID";
+                Importance=Additional }
+
+    { 106 ;2   ;Field     ;
+                SourceExpr=Status;
+                Importance=Promoted;
+                QuickEntry=FALSE }
+
+    { 58  ;1   ;Part      ;
+                Name=SalesLines;
+                SubPageLink=Document No.=FIELD(No.);
+                PagePartID=Page95 }
+
+    { 1905885101;1;Group  ;
+                CaptionML=[ENU=Invoicing;
+                           RUS=???] }
+
+    { 16  ;2   ;Field     ;
+                SourceExpr="Bill-to Customer No.";
+                Importance=Promoted;
+                Enabled="Bill-to Customer No.Enable";
+                OnValidate=BEGIN
+                             BilltoCustomerNoOnAfterValidat;
+                           END;
+                            }
+
+    { 122 ;2   ;Field     ;
+                SourceExpr="Bill-to Contact No." }
+
+    { 166 ;2   ;Field     ;
+                SourceExpr="Bill-to Customer Template Code";
+                Importance=Additional;
+                Enabled=BilltoCustomerTemplateCodeEnab;
+                OnValidate=BEGIN
+                             BilltoCustomerTemplateCodeOnAf;
+                           END;
+                            }
+
+    { 18  ;2   ;Field     ;
+                SourceExpr="Bill-to Name" }
+
+    { 20  ;2   ;Field     ;
+                SourceExpr="Bill-to Address";
+                Importance=Additional }
+
+    { 22  ;2   ;Field     ;
+                SourceExpr="Bill-to Address 2";
+                Importance=Additional }
+
+    { 91  ;2   ;Field     ;
+                SourceExpr="Bill-to Post Code";
+                Importance=Additional }
+
+    { 89  ;2   ;Field     ;
+                SourceExpr="Bill-to City" }
+
+    { 26  ;2   ;Field     ;
+                SourceExpr="Bill-to Contact";
+                Importance=Additional }
+
+    { 80  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 1 Code";
+                OnValidate=BEGIN
+                             ShortcutDimension1CodeOnAfterV;
+                           END;
+                            }
+
+    { 84  ;2   ;Field     ;
+                SourceExpr="Shortcut Dimension 2 Code";
+                OnValidate=BEGIN
+                             ShortcutDimension2CodeOnAfterV;
+                           END;
+                            }
+
+    { 28  ;2   ;Field     ;
+                SourceExpr="Payment Terms Code";
+                Importance=Promoted }
+
+    { 30  ;2   ;Field     ;
+                SourceExpr="Due Date";
+                Importance=Promoted }
+
+    { 32  ;2   ;Field     ;
+                SourceExpr="Payment Discount %" }
+
+    { 34  ;2   ;Field     ;
+                SourceExpr="Pmt. Discount Date";
+                Importance=Additional }
+
+    { 90  ;2   ;Field     ;
+                SourceExpr="Payment Method Code" }
+
+    { 113 ;2   ;Field     ;
+                SourceExpr="Prices Including VAT";
+                OnValidate=BEGIN
+                             PricesIncludingVATOnAfterValid;
+                           END;
+                            }
+
+    { 187 ;2   ;Field     ;
+                SourceExpr="VAT Bus. Posting Group" }
+
+    { 1210002;2;Field     ;
+                SourceExpr="Agreement No." }
+
+    { 1906801201;1;Group  ;
+                CaptionML=[ENU=Shipping;
+                           RUS=?????] }
+
+    { 36  ;2   ;Field     ;
+                SourceExpr="Ship-to Code";
+                Importance=Promoted }
+
+    { 38  ;2   ;Field     ;
+                SourceExpr="Ship-to Name" }
+
+    { 40  ;2   ;Field     ;
+                SourceExpr="Ship-to Address";
+                Importance=Additional }
+
+    { 42  ;2   ;Field     ;
+                SourceExpr="Ship-to Address 2";
+                Importance=Additional }
+
+    { 95  ;2   ;Field     ;
+                SourceExpr="Ship-to Post Code";
+                Importance=Additional }
+
+    { 93  ;2   ;Field     ;
+                SourceExpr="Ship-to City" }
+
+    { 46  ;2   ;Field     ;
+                SourceExpr="Ship-to Contact";
+                Importance=Additional }
+
+    { 1210000;2;Field     ;
+                SourceExpr="KPP Code" }
+
+    { 86  ;2   ;Field     ;
+                SourceExpr="Location Code";
+                Importance=Promoted }
+
+    { 48  ;2   ;Field     ;
+                SourceExpr="Shipment Method Code" }
+
+    { 50  ;2   ;Field     ;
+                SourceExpr="Shipment Date";
+                Importance=Promoted }
+
+    { 1907468901;1;Group  ;
+                CaptionML=[ENU=Foreign Trade;
+                           RUS=?????? ?????] }
+
+    { 97  ;2   ;Field     ;
+                SourceExpr="Currency Code";
+                Importance=Promoted;
+                OnAssistEdit=BEGIN
+                               CLEAR(ChangeExchangeRate);
+                               ChangeExchangeRate.SetParameter("Currency Code","Currency Factor",WORKDATE);
+                               IF ChangeExchangeRate.RUNMODAL = ACTION::OK THEN BEGIN
+                                 VALIDATE("Currency Factor",ChangeExchangeRate.GetParameter);
+                                 CurrPage.UPDATE;
+                               END;
+                               CLEAR(ChangeExchangeRate);
+                             END;
+                              }
+
+    { 52  ;2   ;Field     ;
+                SourceExpr="EU 3-Party Trade" }
+
+    { 54  ;2   ;Field     ;
+                SourceExpr="Transaction Type" }
+
+    { 81  ;2   ;Field     ;
+                SourceExpr="Transaction Specification" }
+
+    { 56  ;2   ;Field     ;
+                SourceExpr="Transport Method" }
+
+    { 25  ;2   ;Field     ;
+                SourceExpr="Exit Point" }
+
+    { 45  ;2   ;Field     ;
+                SourceExpr=Area }
+
+    { 1900000007;0;Container;
+                ContainerType=FactBoxArea }
+
+    { 1903720907;1;Part   ;
+                SubPageLink=No.=FIELD(Sell-to Customer No.);
+                PagePartID=Page9080;
+                Visible=TRUE;
+                PartType=Page }
+
+    { 1907234507;1;Part   ;
+                SubPageLink=No.=FIELD(Bill-to Customer No.);
+                PagePartID=Page9081;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1902018507;1;Part   ;
+                SubPageLink=No.=FIELD(Bill-to Customer No.);
+                PagePartID=Page9082;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1900316107;1;Part   ;
+                SubPageLink=No.=FIELD(Sell-to Customer No.);
+                PagePartID=Page9084;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1906127307;1;Part   ;
+                SubPageLink=Document Type=FIELD(Document Type),
+                            Document No.=FIELD(Document No.),
+                            Line No.=FIELD(Line No.);
+                PagePartID=Page9087;
+                ProviderID=58;
+                Visible=TRUE;
+                PartType=Page }
+
+    { 1901314507;1;Part   ;
+                SubPageLink=No.=FIELD(No.);
+                PagePartID=Page9089;
+                ProviderID=58;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1906354007;1;Part   ;
+                SubPageLink=Table ID=CONST(36),
+                            Document Type=FIELD(Document Type),
+                            Document No.=FIELD(No.);
+                PagePartID=Page9092;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1907012907;1;Part   ;
+                SubPageLink=No.=FIELD(No.);
+                PagePartID=Page9108;
+                ProviderID=58;
+                Visible=FALSE;
+                PartType=Page }
+
+    { 1900383207;1;Part   ;
+                Visible=FALSE;
+                PartType=System;
+                SystemPartID=RecordLinks }
+
+    { 1905767507;1;Part   ;
+                Visible=TRUE;
+                PartType=System;
+                SystemPartID=Notes }
+
+  }
+  CODE
+  {
+    VAR
+      Text000@1000 : TextConst 'ENU=Unable to execute this function while in view only mode.;RUS=?? ????? ??????? ??? ???? ? ???? ?? ?????.';
+      ChangeExchangeRate@1002 : Page 511;
+      CopySalesDoc@1003 : Report 292;
+      DocPrint@1004 : Codeunit 229;
+      UserMgt@1005 : Codeunit 5700;
+      ArchiveManagement@1007 : Codeunit 5063;
+      SalesHeaderArchive@1006 : Record 5107;
+      BilltoCustomerTemplateCodeEnab@19078724 : Boolean INDATASET;
+      SelltoCustomerTemplateCodeEnab@19001802 : Boolean INDATASET;
+      "Sell-to Customer No.Enable"@19037337 : Boolean INDATASET;
+      "Bill-to Customer No.Enable"@19072970 : Boolean INDATASET;
+
+    PROCEDURE UpdateAllowed@1() : Boolean;
+    BEGIN
+      IF CurrPage.EDITABLE = FALSE THEN BEGIN
+        MESSAGE(Text000);
+        EXIT(FALSE);
+      END;
+      EXIT(TRUE);
+    END;
+
+    PROCEDURE ActivateFields@2();
+    BEGIN
+      BilltoCustomerTemplateCodeEnab := "Bill-to Customer No." = '';
+      SelltoCustomerTemplateCodeEnab := "Sell-to Customer No." = '';
+      "Sell-to Customer No.Enable" := "Sell-to Customer Template Code" = '';
+      "Bill-to Customer No.Enable" := "Bill-to Customer Template Code" = '';
+    END;
+
+    LOCAL PROCEDURE ApproveCalcInvDisc@3();
+    BEGIN
+      CurrPage.SalesLines.PAGE.ApproveCalcInvDisc;
+    END;
+
+    LOCAL PROCEDURE SelltoCustomerNoOnAfterValidat@19034782();
+    BEGIN
+      ClearSellToFilter;
+      ActivateFields;
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE SalespersonCodeOnAfterValidate@19011896();
+    BEGIN
+      CurrPage.SalesLines.PAGE.UpdateForm(TRUE);
+    END;
+
+    LOCAL PROCEDURE SelltoContactNoOnAfterValidate@19015826();
+    BEGIN
+      ClearSellToFilter;
+      ActivateFields;
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE SelltoCustomerTemplateCodeOnAf@19025930();
+    BEGIN
+      ActivateFields;
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE BilltoCustomerNoOnAfterValidat@19044114();
+    BEGIN
+      ActivateFields;
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE ShortcutDimension1CodeOnAfterV@19029405();
+    BEGIN
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE ShortcutDimension2CodeOnAfterV@19008725();
+    BEGIN
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE PricesIncludingVATOnAfterValid@19009096();
+    BEGIN
+      CurrPage.UPDATE;
+    END;
+
+    LOCAL PROCEDURE BilltoCustomerTemplateCodeOnAf@19070097();
+    BEGIN
+      ActivateFields;
+      CurrPage.UPDATE;
+    END;
+
+    PROCEDURE ClearSellToFilter@1100();
+    BEGIN
+      IF GETFILTER("Sell-to Customer No.") = xRec."Sell-to Customer No." THEN
+        IF "Sell-to Customer No." <> xRec."Sell-to Customer No." THEN
+          SETRANGE("Sell-to Customer No.");
+      IF GETFILTER("Sell-to Contact No.") = xRec."Sell-to Contact No." THEN
+        IF "Sell-to Contact No." <> xRec."Sell-to Contact No." THEN
+          SETRANGE("Sell-to Contact No.");
+    END;
+
+    BEGIN
+    END.
+  }
+}
+
+

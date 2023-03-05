@@ -1,0 +1,12 @@
+D:\Проекты\local\DevTool2015\DevTool2015\bin\Debug\DevTool2015.exe.config
+D:\Проекты\local\DevTool2015\DevTool2015\bin\Debug\DevTool2015.exe
+D:\Проекты\local\DevTool2015\DevTool2015\bin\Debug\DevTool2015.pdb
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.Form1.resources
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.Properties.Resources.resources
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.csproj.GenerateResource.Cache
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.exe
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.pdb
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.WhereUsed.resources
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.SettingsForm.resources
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.AboutForm.resources
+D:\Проекты\local\DevTool2015\DevTool2015\obj\Debug\DevTool2015.csprojResolveAssemblyReference.cache
